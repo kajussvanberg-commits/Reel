@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reel – your highlight video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+  --bg:#161a22; --panel:#1f242e; --panel-2:#272d39; --line:#343b49;
+  --ink:#f3efe6; --ink-2:#aab1bf; --ink-3:#737b8a;
+  --ring:#e2322b; --ring-soft:rgba(226,50,43,.18);
+  --ok:#4fbf7a;
+  --font-head:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  --font:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f3efe6; --panel:#ffffff; --panel-2:#eae5d9; --line:#d9d3c4;
+  --ink:#171a20; --ink-2:#4b5262; --ink-3:#7b8290; --ring-soft:rgba(226,50,43,.12);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --bg:#f3efe6; --panel:#ffffff; --panel-2:#eae5d9; --line:#d9d3c4;
+    --ink:#171a20; --ink-2:#4b5262; --ink-3:#7b8290; --ring-soft:rgba(226,50,43,.12);
+  }
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+
+.app{max-width:720px;margin:0 auto;padding:0 0 48px}
+header{padding:18px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{font-family:var(--font-head);font-weight:700;font-size:34px;letter-spacing:.5px;margin:0;line-height:1}
+header h1 span{display:inline-block;width:.42em;height:.42em;border:3px solid var(--ring);border-radius:50%;vertical-align:middle;margin-left:6px;transform:translateY(-3px)}
+header small{color:var(--ink-3);font-size:13px;display:block}
+header select{font:inherit;font-size:14px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:46vw}
+
+.stage{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:0 0 10px}
+.frame{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden}
+.frame video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.frame canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.frame .tap{position:absolute;inset:0;cursor:crosshair;display:none}
+.frame.marking .tap{display:block}
+.frame .hint{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;font-size:14px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.75));pointer-events:none;display:none}
+.frame.marking .hint{display:block}
+.frame .crop{position:absolute;top:0;bottom:0;border-left:2px solid rgba(255,255,255,.7);border-right:2px solid rgba(255,255,255,.7);pointer-events:none;display:none}
+.frame.vertical .crop{display:block}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--ink-2)}
+.empty b{display:block;color:#fff;font-family:var(--font-head);font-size:28px;font-weight:700;margin-bottom:4px}
+.empty p{margin:0;font-size:14px;max-width:34ch}
+.srcsel{display:block;width:calc(100% - 32px);margin:8px 16px 0;font:inherit;font-size:14px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.transport{display:flex;align-items:center;gap:10px;padding:10px 16px 0}
+.transport .time{font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:14px;min-width:96px}
+.transport input[type=range]{flex:1;accent-color:var(--ring)}
+
+section{padding:16px;border-top:1px solid var(--line)}
+section h2{font-family:var(--font-head);font-size:22px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+section h2 i{font-style:normal;font-size:14px;font-family:var(--font);font-weight:600;color:var(--bg);background:var(--ink);border-radius:50%;width:22px;height:22px;display:inline-grid;place-items:center}
+section h2 i.done{background:var(--ok);color:#fff}
+section p.lead{margin:0 0 12px;color:var(--ink-2);font-size:15px}
+
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 16px;background:var(--panel-2);color:var(--ink);cursor:pointer;min-height:44px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--ring);color:#fff}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+button.big{width:100%;font-size:18px;font-family:var(--font-head);letter-spacing:.3px;min-height:52px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row > *{flex:1}
+label.file{display:block}
+label.file input{display:none}
+
+.clips{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.clip{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.clip.active{border-color:var(--ring);box-shadow:0 0 0 3px var(--ring-soft)}
+.clip input[type=checkbox]{width:22px;height:22px;accent-color:var(--ring)}
+.clip .t{flex:1;cursor:pointer;min-width:0}
+.clip .t b{font-variant-numeric:tabular-nums}
+.clip .t small{display:block;color:var(--ink-3);font-size:13px}
+.clip .x{background:none;padding:6px 8px;color:var(--ink-3);min-height:0}
+.clip .pts{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:4px}
+.clip .pts::before{content:"";width:10px;height:10px;border:2px solid var(--ring);border-radius:50%}
+.recording{color:var(--ring);font-weight:600}
+
+.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.field:last-child{border-bottom:0}
+.field label{color:var(--ink-2)}
+.field .val{min-width:3.5ch;text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.seg{display:flex;background:var(--panel-2);border-radius:10px;padding:3px}
+.seg button{background:transparent;padding:8px 12px;min-height:38px;color:var(--ink-2);flex:1}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.swatches{display:flex;gap:8px}
+.swatches button{width:34px;height:34px;min-height:0;padding:0;border-radius:50%;border:3px solid transparent;flex:none}
+.swatches button[aria-pressed=true]{border-color:var(--ink)}
+.music{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.music .name{flex:1;color:var(--ink-2);font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.progress{height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden;margin:12px 0 6px;display:none}
+.progress div{height:100%;background:var(--ring);width:0;transition:width .2s}
+.status{color:var(--ink-2);font-size:14px;min-height:20px}
+.result{margin-top:12px;display:none}
+.result video{width:100%;border-radius:10px;background:#000}
+.result .note{font-size:13px;color:var(--ink-3);margin-top:6px}
+.summary{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.summary b{font-family:var(--font-head);font-size:22px;font-weight:700}
+.summary small{display:block;color:var(--ink-3);font-size:13px}
+
+/* access gate */
+.gate{position:fixed;inset:0;background:var(--bg);z-index:20;display:grid;place-items:center;padding:24px}
+.gate.hidden{display:none}
+.gate form{width:100%;max-width:360px}
+.gate h1{font-family:var(--font-head);font-size:44px;margin:0 0 4px;line-height:1}
+.gate h1 span{display:inline-block;width:.42em;height:.42em;border:3px solid var(--ring);border-radius:50%;vertical-align:middle;margin-left:6px;transform:translateY(-4px)}
+.gate p{color:var(--ink-2);margin:0 0 16px}
+.gate input{width:100%;font:inherit;font-size:18px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:10px;text-transform:uppercase;letter-spacing:.1em}
+.gate .err{color:var(--ring);font-size:14px;min-height:20px;margin-top:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <form id="gateForm">
+    <h1>Reel<span aria-hidden="true"></span></h1>
+    <p data-i18n="gate_body"></p>
+    <input id="gateCode" autocomplete="off" autocapitalize="characters" placeholder="CODE" aria-label="Access code">
+    <button class="big primary" type="submit" data-i18n="gate_btn"></button>
+    <div class="err" id="gateErr"></div>
+  </form>
+</div>
+
+<div class="app">
+<header>
+  <div><h1>Reel<span aria-hidden="true"></span></h1><small data-i18n="tagline"></small></div>
+  <select id="lang" aria-label="Language"></select>
+</header>
+
+<div class="stage">
+  <div class="frame" id="frame">
+    <video id="video" playsinline preload="metadata" crossorigin="anonymous"></video>
+    <canvas id="overlay"></canvas>
+    <div class="crop" id="cropGuide"></div>
+    <div class="tap" id="tap" role="button"></div>
+    <div class="hint" data-i18n="hint"></div>
+    <div class="empty" id="empty"><div><b data-i18n="empty_title"></b><p data-i18n="empty_body"></p></div></div>
+  </div>
+  <select id="srcSel" class="srcsel" aria-label="Video" style="display:none"></select>
+  <div class="transport">
+    <button id="playBtn" disabled aria-label="Play / pause">▶</button>
+    <input type="range" id="scrub" min="0" max="0" step="0.05" value="0" disabled aria-label="Scrub">
+    <span class="time" id="time">0:00 / 0:00</span>
+  </div>
+</div>
+
+<section>
+  <h2><i id="s1">1</i><span data-i18n="s1"></span></h2>
+  <p class="lead" data-i18n="s1_lead"></p>
+  <label class="file"><input type="file" id="videoFile" accept="video/*" multiple><button class="big" type="button" onclick="document.getElementById('videoFile').click()" data-i18n="pick_video"></button></label>
+</section>
+
+<section>
+  <h2><i id="s2">2</i><span data-i18n="s2"></span></h2>
+  <p class="lead" data-i18n="s2_lead"></p>
+  <div class="row">
+    <button id="inBtn" class="primary" disabled data-i18n="start"></button>
+    <button id="outBtn" disabled data-i18n="stop"></button>
+  </div>
+  <div class="status" id="clipStatus"></div>
+  <ul class="clips" id="clips"></ul>
+</section>
+
+<section>
+  <h2><i id="s3">3</i><span data-i18n="s3"></span></h2>
+  <p class="lead" data-i18n="s3_lead"></p>
+  <div class="row">
+    <button id="markBtn" disabled data-i18n="mark"></button>
+    <button id="clearPtsBtn" class="ghost" disabled data-i18n="clear_pts"></button>
+  </div>
+  <div class="status" id="markStatus"></div>
+</section>
+
+<section>
+  <h2><i>4</i><span data-i18n="s4"></span></h2>
+  <div class="field"><label data-i18n="ring"></label>
+    <div class="swatches" id="swatches">
+      <button data-c="#e2322b" style="background:#e2322b" aria-pressed="true" data-i18n-aria="c_red"></button>
+      <button data-c="#ffd400" style="background:#ffd400" data-i18n-aria="c_yellow"></button>
+      <button data-c="#ffffff" style="background:#fff" data-i18n-aria="c_white"></button>
+      <button data-c="#1ec8ff" style="background:#1ec8ff" data-i18n-aria="c_blue"></button>
+    </div>
+  </div>
+  <div class="field"><label for="ringSize" data-i18n="ring_size"></label><input type="range" id="ringSize" min="20" max="90" value="46"><span class="val" id="ringSizeVal">46</span></div>
+  <div class="field"><label data-i18n="speed"></label>
+    <div class="seg" id="speedSeg">
+      <button data-s="0.5">0.5×</button><button data-s="0.75">0.75×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="1.5">1.5×</button>
+    </div>
+  </div>
+  <div class="field"><label data-i18n="format"></label>
+    <div class="seg" id="formatSeg">
+      <button data-f="16:9" aria-pressed="true">16:9</button><button data-f="9:16" data-i18n="follow"></button>
+    </div>
+  </div>
+  <div class="field"><label data-i18n="music"></label>
+    <div class="music">
+      <label class="file"><input type="file" id="musicFile" accept="audio/*"><button type="button" onclick="document.getElementById('musicFile').click()" data-i18n="pick_music"></button></label>
+      <span class="name" id="musicName"></span>
+    </div>
+  </div>
+  <div class="field"><label for="musicVol" data-i18n="music_vol"></label><input type="range" id="musicVol" min="0" max="100" value="80"><span class="val" id="musicVolVal">80</span></div>
+  <div class="field"><label for="gameVol" data-i18n="game_vol"></label><input type="range" id="gameVol" min="0" max="100" value="25"><span class="val" id="gameVolVal">25</span></div>
+</section>
+
+<section>
+  <h2><i>5</i><span data-i18n="s5"></span></h2>
+  <div class="summary"><div><b id="sumClips">0</b><small data-i18n="sum_clips"></small></div><div><b id="sumLen">0:00</b><small data-i18n="sum_len"></small></div><div><b id="sumPts">0</b><small data-i18n="sum_pts"></small></div></div>
+  <p class="lead" data-i18n="s5_lead"></p>
+  <button id="exportBtn" class="big primary" disabled data-i18n="export"></button>
+  <div class="progress" id="progress"><div id="progressBar"></div></div>
+  <div class="status" id="exportStatus"></div>
+  <div class="result" id="result">
+    <video id="resultVideo" controls playsinline></video>
+    <div class="row" style="margin-top:8px"><button id="saveBtn" class="primary" data-i18n="save"></button></div>
+    <div class="note" id="resultNote"></div>
+  </div>
+</section>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+// ---------- translations ----------
+const L = {
+en:{_n:"English",tagline:"Your highlight video from Veo",empty_title:"No video yet",empty_body:"Download your match as MP4 from Veo (app.veo.co) and pick the file below.",s1:"Match video",s1_lead:"The whole match or a single Veo clip. Nothing is uploaded – it all happens on your phone.",pick_video:"Choose video file",s2:"Your clips",s2_lead:"Play the video and tap Start when something good happens, Stop when it's over. Untick what you don't want.",start:"Start",stop:"Stop",clip_started:"Clip started at {t} – tap Stop when it's over.",clip_short:"Clip too short. Let it run at least half a second.",clip_saved:"Clip saved. Add more or go to step 3.",remove_clip:"Remove clip",include_clip:"Include clip {n}",s3:"Mark yourself",s3_lead:"Select a clip in the list, scrub to its start and tap yourself in the picture. Do the same at the end – the ring follows you in between. Add more points where you change direction.",mark:"Mark in picture",done:"Done",clear_pts:"Clear points",hint:"Tap yourself in the picture",choose_clip:"Select a clip in the list above.",selected_clip:"Selected clip: {a} – {b} ({n} points).",marking_help:"Scrub within the clip and tap yourself. Each tap adds a point at that time.",pt1:"Point 1 set. Scrub to the end of the clip and tap again.",ptn:"{n} points set. Add more where you change direction, or tap Done.",s4:"Style",ring:"Ring",ring_size:"Ring size",speed:"Speed",format:"Format",follow:"9:16 follows you",music:"Music",pick_music:"Choose track",no_music:"No music chosen",music_vol:"Music volume",game_vol:"Match audio",c_red:"Red",c_yellow:"Yellow",c_white:"White",c_blue:"Blue",s5:"Export",sum_clips:"clips selected",sum_len:"length",sum_pts:"clips without ring",s5_lead:"Export plays the clips in real time and records them. Keep the app open until it's done.",export:"Create video",rec_clip:"Recording clip {i} of {n}…",done_msg:"Done – {t} long ({mb} MB).",note_webm:"The file is WebM. Instagram and TikTok accept it; the iPhone Photos app may need a converter. On iPhone/Safari you get MP4 directly.",note_mp4:"MP4 – ready to post.",export_fail:"Export failed: {e}. Try Safari on iPhone or Chrome on desktop.",save:"Save to phone",saved:"Saved.",save_fail:"Couldn't save ({c}). Press and hold the video above and choose Save.",save_manual:"Press and hold the video above and choose Save video, or open it full screen and save from there.",gate_body:"Early access. Enter your access code.",gate_btn:"Open",gate_bad:"Wrong code."},
+sv:{_n:"Svenska",tagline:"Din highlight-video från Veo",empty_title:"Ingen video än",empty_body:"Ladda ner matchen som MP4 från Veo (app.veo.co) och välj filen nedan.",s1:"Matchvideo",s1_lead:"Hela matchen eller ett enskilt Veo-klipp. Inget laddas upp – allt sker på din telefon.",pick_video:"Välj videofil",s2:"Dina klipp",s2_lead:"Spela videon och tryck Start när något bra händer, Stopp när det är över. Bocka ur det du inte vill ha med.",start:"Start",stop:"Stopp",clip_started:"Klipp startat vid {t} – tryck Stopp när det är över.",clip_short:"Klippet blev för kort. Låt det gå minst en halv sekund.",clip_saved:"Klipp sparat. Lägg till fler eller gå till steg 3.",remove_clip:"Ta bort klipp",include_clip:"Ta med klipp {n}",s3:"Markera dig själv",s3_lead:"Välj ett klipp i listan, spola till början och tryck på dig själv i bilden. Gör samma sak i slutet – ringen följer dig däremellan. Lägg till fler punkter där du byter riktning.",mark:"Markera i bilden",done:"Klar",clear_pts:"Rensa punkter",hint:"Tryck på dig själv i bilden",choose_clip:"Välj ett klipp i listan ovan.",selected_clip:"Valt klipp: {a} – {b} ({n} punkter).",marking_help:"Spola i klippet och tryck på dig själv. Varje tryck blir en punkt vid den tiden.",pt1:"Punkt 1 satt. Spola till slutet av klippet och tryck igen.",ptn:"{n} punkter satta. Lägg till fler där du byter riktning, eller tryck Klar.",s4:"Stil",ring:"Ring",ring_size:"Ringstorlek",speed:"Tempo",format:"Format",follow:"9:16 följer dig",music:"Musik",pick_music:"Välj låt",no_music:"Ingen musik vald",music_vol:"Musikvolym",game_vol:"Matchljud",c_red:"Röd",c_yellow:"Gul",c_white:"Vit",c_blue:"Blå",s5:"Exportera",sum_clips:"klipp valda",sum_len:"längd",sum_pts:"klipp utan ring",s5_lead:"Exporten spelar upp klippen i realtid och spelar in dem. Håll appen öppen tills den är klar.",export:"Skapa video",rec_clip:"Spelar in klipp {i} av {n}…",done_msg:"Klart – {t} lång ({mb} MB).",note_webm:"Filen är WebM. Instagram och TikTok tar emot den, men iPhones foto-app kan behöva en konverterare. På iPhone/Safari blir det MP4 direkt.",note_mp4:"MP4 – redo att läggas upp.",export_fail:"Exporten gick inte: {e}. Prova Safari på iPhone eller Chrome på dator.",save:"Spara till telefonen",saved:"Sparad.",save_fail:"Kunde inte spara ({c}). Håll fingret på videon ovan och välj Spara.",save_manual:"Håll fingret på videon ovan och välj Spara video, eller öppna den i helskärm och spara därifrån.",gate_body:"Tidig åtkomst. Ange din kod.",gate_btn:"Öppna",gate_bad:"Fel kod."},
+fi:{_n:"Suomi",tagline:"Highlight-videosi Veosta",empty_title:"Ei vielä videota",empty_body:"Lataa ottelu MP4-tiedostona Veosta (app.veo.co) ja valitse tiedosto alta.",s1:"Ottelun video",s1_lead:"Koko ottelu tai yksittäinen Veo-klippi. Mitään ei ladata palvelimelle – kaikki tapahtuu puhelimessasi.",pick_video:"Valitse videotiedosto",s2:"Klippisi",s2_lead:"Toista video ja paina Aloita kun jotain hyvää tapahtuu, Lopeta kun se on ohi. Poista rasti niistä, joita et halua mukaan.",start:"Aloita",stop:"Lopeta",clip_started:"Klippi aloitettu kohdassa {t} – paina Lopeta kun se on ohi.",clip_short:"Klippi on liian lyhyt. Anna sen kestää vähintään puoli sekuntia.",clip_saved:"Klippi tallennettu. Lisää lisää tai siirry vaiheeseen 3.",remove_clip:"Poista klippi",include_clip:"Ota klippi {n} mukaan",s3:"Merkitse itsesi",s3_lead:"Valitse klippi listasta, kelaa sen alkuun ja napauta itseäsi kuvassa. Tee sama lopussa – rengas seuraa sinua siltä väliltä. Lisää pisteitä, kun vaihdat suuntaa.",mark:"Merkitse kuvassa",done:"Valmis",clear_pts:"Tyhjennä pisteet",hint:"Napauta itseäsi kuvassa",choose_clip:"Valitse klippi yllä olevasta listasta.",selected_clip:"Valittu klippi: {a} – {b} ({n} pistettä).",marking_help:"Kelaa klipin sisällä ja napauta itseäsi. Jokainen napautus lisää pisteen siihen kohtaan.",pt1:"Piste 1 asetettu. Kelaa klipin loppuun ja napauta uudelleen.",ptn:"{n} pistettä asetettu. Lisää pisteitä suunnanvaihtoihin tai paina Valmis.",s4:"Tyyli",ring:"Rengas",ring_size:"Renkaan koko",speed:"Nopeus",format:"Muoto",follow:"9:16 seuraa sinua",music:"Musiikki",pick_music:"Valitse kappale",no_music:"Ei musiikkia",music_vol:"Musiikin voimakkuus",game_vol:"Ottelun ääni",c_red:"Punainen",c_yellow:"Keltainen",c_white:"Valkoinen",c_blue:"Sininen",s5:"Vie video",sum_clips:"klippiä valittu",sum_len:"kesto",sum_pts:"klippiä ilman rengasta",s5_lead:"Vienti toistaa klipit reaaliajassa ja tallentaa ne. Pidä sovellus auki, kunnes se on valmis.",export:"Luo video",rec_clip:"Tallennetaan klippiä {i}/{n}…",done_msg:"Valmis – kesto {t} ({mb} MB).",note_webm:"Tiedosto on WebM. Instagram ja TikTok hyväksyvät sen; iPhonen Kuvat-sovellus voi tarvita muuntimen. iPhonella/Safarilla saat suoraan MP4:n.",note_mp4:"MP4 – valmis julkaistavaksi.",export_fail:"Vienti epäonnistui: {e}. Kokeile Safaria iPhonella tai Chromea tietokoneella.",save:"Tallenna puhelimeen",saved:"Tallennettu.",save_fail:"Tallennus ei onnistunut ({c}). Paina videota pitkään ja valitse Tallenna.",save_manual:"Paina yllä olevaa videota pitkään ja valitse Tallenna video, tai avaa se koko näytölle ja tallenna sieltä.",gate_body:"Varhainen käyttö. Syötä käyttökoodisi.",gate_btn:"Avaa",gate_bad:"Väärä koodi."},
+no:{_n:"Norsk",tagline:"Din highlight-video fra Veo",empty_title:"Ingen video ennå",empty_body:"Last ned kampen som MP4 fra Veo (app.veo.co) og velg filen under.",s1:"Kampvideo",s1_lead:"Hele kampen eller et enkelt Veo-klipp. Ingenting lastes opp – alt skjer på telefonen din.",pick_video:"Velg videofil",s2:"Dine klipp",s2_lead:"Spill av videoen og trykk Start når noe bra skjer, Stopp når det er over. Fjern haken på det du ikke vil ha med.",start:"Start",stop:"Stopp",clip_started:"Klipp startet ved {t} – trykk Stopp når det er over.",clip_short:"Klippet ble for kort. La det vare minst et halvt sekund.",clip_saved:"Klipp lagret. Legg til flere eller gå til steg 3.",remove_clip:"Fjern klipp",include_clip:"Ta med klipp {n}",s3:"Marker deg selv",s3_lead:"Velg et klipp i listen, spol til starten og trykk på deg selv i bildet. Gjør det samme på slutten – ringen følger deg imellom. Legg til flere punkter der du skifter retning.",mark:"Marker i bildet",done:"Ferdig",clear_pts:"Fjern punkter",hint:"Trykk på deg selv i bildet",choose_clip:"Velg et klipp i listen over.",selected_clip:"Valgt klipp: {a} – {b} ({n} punkter).",marking_help:"Spol i klippet og trykk på deg selv. Hvert trykk blir et punkt på det tidspunktet.",pt1:"Punkt 1 satt. Spol til slutten av klippet og trykk igjen.",ptn:"{n} punkter satt. Legg til flere der du skifter retning, eller trykk Ferdig.",s4:"Stil",ring:"Ring",ring_size:"Ringstørrelse",speed:"Tempo",format:"Format",follow:"9:16 følger deg",music:"Musikk",pick_music:"Velg låt",no_music:"Ingen musikk valgt",music_vol:"Musikkvolum",game_vol:"Kamplyd",c_red:"Rød",c_yellow:"Gul",c_white:"Hvit",c_blue:"Blå",s5:"Eksporter",sum_clips:"klipp valgt",sum_len:"lengde",sum_pts:"klipp uten ring",s5_lead:"Eksporten spiller av klippene i sanntid og tar dem opp. Hold appen åpen til den er ferdig.",export:"Lag video",rec_clip:"Tar opp klipp {i} av {n}…",done_msg:"Ferdig – {t} lang ({mb} MB).",note_webm:"Filen er WebM. Instagram og TikTok tar imot den, men iPhones Bilder-app kan trenge en konverterer. På iPhone/Safari får du MP4 direkte.",note_mp4:"MP4 – klar til å legges ut.",export_fail:"Eksporten feilet: {e}. Prøv Safari på iPhone eller Chrome på PC.",save:"Lagre på telefonen",saved:"Lagret.",save_fail:"Kunne ikke lagre ({c}). Hold fingeren på videoen over og velg Lagre.",save_manual:"Hold fingeren på videoen over og velg Lagre video, eller åpne den i fullskjerm og lagre derfra.",gate_body:"Tidlig tilgang. Skriv inn koden din.",gate_btn:"Åpne",gate_bad:"Feil kode."},
+da:{_n:"Dansk",tagline:"Din highlight-video fra Veo",empty_title:"Ingen video endnu",empty_body:"Download kampen som MP4 fra Veo (app.veo.co) og vælg filen nedenfor.",s1:"Kampvideo",s1_lead:"Hele kampen eller et enkelt Veo-klip. Intet uploades – det hele sker på din telefon.",pick_video:"Vælg videofil",s2:"Dine klip",s2_lead:"Afspil videoen og tryk Start når noget godt sker, Stop når det er slut. Fjern fluebenet ved det, du ikke vil have med.",start:"Start",stop:"Stop",clip_started:"Klip startet ved {t} – tryk Stop når det er slut.",clip_short:"Klippet blev for kort. Lad det vare mindst et halvt sekund.",clip_saved:"Klip gemt. Tilføj flere eller gå til trin 3.",remove_clip:"Fjern klip",include_clip:"Tag klip {n} med",s3:"Markér dig selv",s3_lead:"Vælg et klip i listen, spol til starten og tryk på dig selv i billedet. Gør det samme til sidst – ringen følger dig imellem. Tilføj flere punkter, hvor du skifter retning.",mark:"Markér i billedet",done:"Færdig",clear_pts:"Ryd punkter",hint:"Tryk på dig selv i billedet",choose_clip:"Vælg et klip i listen ovenfor.",selected_clip:"Valgt klip: {a} – {b} ({n} punkter).",marking_help:"Spol i klippet og tryk på dig selv. Hvert tryk bliver et punkt på det tidspunkt.",pt1:"Punkt 1 sat. Spol til slutningen af klippet og tryk igen.",ptn:"{n} punkter sat. Tilføj flere, hvor du skifter retning, eller tryk Færdig.",s4:"Stil",ring:"Ring",ring_size:"Ringstørrelse",speed:"Tempo",format:"Format",follow:"9:16 følger dig",music:"Musik",pick_music:"Vælg nummer",no_music:"Ingen musik valgt",music_vol:"Musikvolumen",game_vol:"Kamplyd",c_red:"Rød",c_yellow:"Gul",c_white:"Hvid",c_blue:"Blå",s5:"Eksportér",sum_clips:"klip valgt",sum_len:"længde",sum_pts:"klip uden ring",s5_lead:"Eksporten afspiller klippene i realtid og optager dem. Hold appen åben, til den er færdig.",export:"Lav video",rec_clip:"Optager klip {i} af {n}…",done_msg:"Færdig – {t} lang ({mb} MB).",note_webm:"Filen er WebM. Instagram og TikTok tager imod den, men iPhones Fotos-app kan kræve en konverter. På iPhone/Safari får du MP4 direkte.",note_mp4:"MP4 – klar til at blive lagt op.",export_fail:"Eksporten mislykkedes: {e}. Prøv Safari på iPhone eller Chrome på computer.",save:"Gem på telefonen",saved:"Gemt.",save_fail:"Kunne ikke gemme ({c}). Hold fingeren på videoen ovenfor og vælg Gem.",save_manual:"Hold fingeren på videoen ovenfor og vælg Gem video, eller åbn den i fuld skærm og gem derfra.",gate_body:"Tidlig adgang. Indtast din kode.",gate_btn:"Åbn",gate_bad:"Forkert kode."},
+de:{_n:"Deutsch",tagline:"Dein Highlight-Video aus Veo",empty_title:"Noch kein Video",empty_body:"Lade das Spiel als MP4 aus Veo (app.veo.co) herunter und wähle die Datei unten.",s1:"Spielvideo",s1_lead:"Das ganze Spiel oder ein einzelner Veo-Clip. Nichts wird hochgeladen – alles passiert auf deinem Handy.",pick_video:"Videodatei wählen",s2:"Deine Clips",s2_lead:"Spiel das Video ab und tippe auf Start, wenn etwas Gutes passiert, auf Stopp, wenn es vorbei ist. Hake ab, was du nicht willst.",start:"Start",stop:"Stopp",clip_started:"Clip gestartet bei {t} – tippe auf Stopp, wenn er vorbei ist.",clip_short:"Clip zu kurz. Mindestens eine halbe Sekunde.",clip_saved:"Clip gespeichert. Füge weitere hinzu oder geh zu Schritt 3.",remove_clip:"Clip entfernen",include_clip:"Clip {n} einschließen",s3:"Markiere dich",s3_lead:"Wähle einen Clip in der Liste, spule zum Anfang und tippe im Bild auf dich. Mach dasselbe am Ende – der Ring folgt dir dazwischen. Setze mehr Punkte, wo du die Richtung wechselst.",mark:"Im Bild markieren",done:"Fertig",clear_pts:"Punkte löschen",hint:"Tippe im Bild auf dich",choose_clip:"Wähle oben einen Clip aus.",selected_clip:"Gewählter Clip: {a} – {b} ({n} Punkte).",marking_help:"Spule im Clip und tippe auf dich. Jeder Tipp setzt einen Punkt zu dieser Zeit.",pt1:"Punkt 1 gesetzt. Spule zum Ende des Clips und tippe erneut.",ptn:"{n} Punkte gesetzt. Setze mehr bei Richtungswechseln oder tippe auf Fertig.",s4:"Stil",ring:"Ring",ring_size:"Ringgröße",speed:"Tempo",format:"Format",follow:"9:16 folgt dir",music:"Musik",pick_music:"Track wählen",no_music:"Keine Musik gewählt",music_vol:"Musiklautstärke",game_vol:"Spielton",c_red:"Rot",c_yellow:"Gelb",c_white:"Weiß",c_blue:"Blau",s5:"Exportieren",sum_clips:"Clips gewählt",sum_len:"Länge",sum_pts:"Clips ohne Ring",s5_lead:"Der Export spielt die Clips in Echtzeit ab und nimmt sie auf. Lass die App offen, bis er fertig ist.",export:"Video erstellen",rec_clip:"Nehme Clip {i} von {n} auf…",done_msg:"Fertig – {t} lang ({mb} MB).",note_webm:"Die Datei ist WebM. Instagram und TikTok nehmen sie an; die iPhone-Fotos-App braucht evtl. einen Konverter. Auf iPhone/Safari bekommst du direkt MP4.",note_mp4:"MP4 – bereit zum Posten.",export_fail:"Export fehlgeschlagen: {e}. Versuch Safari auf dem iPhone oder Chrome am Rechner.",save:"Aufs Handy speichern",saved:"Gespeichert.",save_fail:"Speichern fehlgeschlagen ({c}). Halte das Video oben gedrückt und wähle Sichern.",save_manual:"Halte das Video oben gedrückt und wähle Video sichern, oder öffne es im Vollbild und speichere von dort.",gate_body:"Früher Zugang. Gib deinen Code ein.",gate_btn:"Öffnen",gate_bad:"Falscher Code."},
+es:{_n:"Español",tagline:"Tu vídeo de highlights desde Veo",empty_title:"Aún no hay vídeo",empty_body:"Descarga el partido en MP4 desde Veo (app.veo.co) y elige el archivo abajo.",s1:"Vídeo del partido",s1_lead:"El partido entero o un clip de Veo. No se sube nada: todo ocurre en tu móvil.",pick_video:"Elegir archivo de vídeo",s2:"Tus clips",s2_lead:"Reproduce el vídeo y pulsa Inicio cuando pase algo bueno, Fin cuando termine. Desmarca lo que no quieras.",start:"Inicio",stop:"Fin",clip_started:"Clip iniciado en {t}: pulsa Fin cuando termine.",clip_short:"Clip demasiado corto. Al menos medio segundo.",clip_saved:"Clip guardado. Añade más o ve al paso 3.",remove_clip:"Quitar clip",include_clip:"Incluir clip {n}",s3:"Márcate",s3_lead:"Elige un clip de la lista, ve a su inicio y toca sobre ti en la imagen. Haz lo mismo al final: el anillo te sigue entre medias. Añade más puntos donde cambies de dirección.",mark:"Marcar en la imagen",done:"Listo",clear_pts:"Borrar puntos",hint:"Toca sobre ti en la imagen",choose_clip:"Elige un clip de la lista de arriba.",selected_clip:"Clip elegido: {a} – {b} ({n} puntos).",marking_help:"Avanza dentro del clip y toca sobre ti. Cada toque añade un punto en ese instante.",pt1:"Punto 1 puesto. Ve al final del clip y toca de nuevo.",ptn:"{n} puntos. Añade más donde cambies de dirección o pulsa Listo.",s4:"Estilo",ring:"Anillo",ring_size:"Tamaño del anillo",speed:"Velocidad",format:"Formato",follow:"9:16 te sigue",music:"Música",pick_music:"Elegir canción",no_music:"Sin música",music_vol:"Volumen de música",game_vol:"Audio del partido",c_red:"Rojo",c_yellow:"Amarillo",c_white:"Blanco",c_blue:"Azul",s5:"Exportar",sum_clips:"clips elegidos",sum_len:"duración",sum_pts:"clips sin anillo",s5_lead:"La exportación reproduce los clips en tiempo real y los graba. Mantén la app abierta hasta que termine.",export:"Crear vídeo",rec_clip:"Grabando clip {i} de {n}…",done_msg:"Listo: {t} de duración ({mb} MB).",note_webm:"El archivo es WebM. Instagram y TikTok lo aceptan; la app Fotos de iPhone puede necesitar un conversor. En iPhone/Safari obtienes MP4 directamente.",note_mp4:"MP4, listo para publicar.",export_fail:"La exportación falló: {e}. Prueba Safari en iPhone o Chrome en ordenador.",save:"Guardar en el móvil",saved:"Guardado.",save_fail:"No se pudo guardar ({c}). Mantén pulsado el vídeo de arriba y elige Guardar.",save_manual:"Mantén pulsado el vídeo de arriba y elige Guardar vídeo, o ábrelo a pantalla completa y guárdalo desde ahí.",gate_body:"Acceso anticipado. Introduce tu código.",gate_btn:"Abrir",gate_bad:"Código incorrecto."},
+fr:{_n:"Français",tagline:"Ta vidéo de highlights depuis Veo",empty_title:"Pas encore de vidéo",empty_body:"Télécharge le match en MP4 depuis Veo (app.veo.co) et choisis le fichier ci-dessous.",s1:"Vidéo du match",s1_lead:"Le match entier ou un clip Veo. Rien n'est envoyé : tout se passe sur ton téléphone.",pick_video:"Choisir un fichier vidéo",s2:"Tes clips",s2_lead:"Lance la vidéo et appuie sur Début quand il se passe quelque chose de bien, Fin quand c'est terminé. Décoche ce que tu ne veux pas.",start:"Début",stop:"Fin",clip_started:"Clip commencé à {t} – appuie sur Fin quand c'est terminé.",clip_short:"Clip trop court. Au moins une demi-seconde.",clip_saved:"Clip enregistré. Ajoutes-en d'autres ou passe à l'étape 3.",remove_clip:"Supprimer le clip",include_clip:"Inclure le clip {n}",s3:"Marque-toi",s3_lead:"Choisis un clip dans la liste, va au début et touche-toi dans l'image. Fais pareil à la fin : le cercle te suit entre les deux. Ajoute des points là où tu changes de direction.",mark:"Marquer dans l'image",done:"Terminé",clear_pts:"Effacer les points",hint:"Touche-toi dans l'image",choose_clip:"Choisis un clip dans la liste ci-dessus.",selected_clip:"Clip choisi : {a} – {b} ({n} points).",marking_help:"Avance dans le clip et touche-toi. Chaque touche ajoute un point à cet instant.",pt1:"Point 1 placé. Va à la fin du clip et touche à nouveau.",ptn:"{n} points placés. Ajoutes-en là où tu changes de direction, ou appuie sur Terminé.",s4:"Style",ring:"Cercle",ring_size:"Taille du cercle",speed:"Vitesse",format:"Format",follow:"9:16 te suit",music:"Musique",pick_music:"Choisir un morceau",no_music:"Aucune musique",music_vol:"Volume musique",game_vol:"Son du match",c_red:"Rouge",c_yellow:"Jaune",c_white:"Blanc",c_blue:"Bleu",s5:"Exporter",sum_clips:"clips choisis",sum_len:"durée",sum_pts:"clips sans cercle",s5_lead:"L'export lit les clips en temps réel et les enregistre. Garde l'app ouverte jusqu'à la fin.",export:"Créer la vidéo",rec_clip:"Enregistrement du clip {i} sur {n}…",done_msg:"Terminé : {t} ({mb} Mo).",note_webm:"Le fichier est en WebM. Instagram et TikTok l'acceptent ; l'app Photos d'iPhone peut nécessiter un convertisseur. Sur iPhone/Safari tu obtiens directement du MP4.",note_mp4:"MP4, prêt à publier.",export_fail:"Échec de l'export : {e}. Essaie Safari sur iPhone ou Chrome sur ordinateur.",save:"Enregistrer sur le téléphone",saved:"Enregistré.",save_fail:"Impossible d'enregistrer ({c}). Maintiens la vidéo ci-dessus et choisis Enregistrer.",save_manual:"Maintiens la vidéo ci-dessus et choisis Enregistrer la vidéo, ou ouvre-la en plein écran et enregistre depuis là.",gate_body:"Accès anticipé. Saisis ton code.",gate_btn:"Ouvrir",gate_bad:"Code incorrect."},
+it:{_n:"Italiano",tagline:"Il tuo video highlights da Veo",empty_title:"Nessun video ancora",empty_body:"Scarica la partita in MP4 da Veo (app.veo.co) e scegli il file qui sotto.",s1:"Video della partita",s1_lead:"L'intera partita o una singola clip Veo. Niente viene caricato: tutto avviene sul tuo telefono.",pick_video:"Scegli file video",s2:"Le tue clip",s2_lead:"Riproduci il video e tocca Inizio quando succede qualcosa di buono, Fine quando è finito. Deseleziona ciò che non vuoi.",start:"Inizio",stop:"Fine",clip_started:"Clip iniziata a {t}: tocca Fine quando è finita.",clip_short:"Clip troppo corta. Almeno mezzo secondo.",clip_saved:"Clip salvata. Aggiungine altre o vai al passo 3.",remove_clip:"Rimuovi clip",include_clip:"Includi clip {n}",s3:"Segnati",s3_lead:"Scegli una clip nell'elenco, vai all'inizio e tocca te stesso nell'immagine. Fai lo stesso alla fine: il cerchio ti segue nel mezzo. Aggiungi punti dove cambi direzione.",mark:"Segna nell'immagine",done:"Fatto",clear_pts:"Cancella punti",hint:"Tocca te stesso nell'immagine",choose_clip:"Scegli una clip nell'elenco qui sopra.",selected_clip:"Clip scelta: {a} – {b} ({n} punti).",marking_help:"Scorri nella clip e tocca te stesso. Ogni tocco aggiunge un punto in quell'istante.",pt1:"Punto 1 impostato. Vai alla fine della clip e tocca di nuovo.",ptn:"{n} punti impostati. Aggiungine dove cambi direzione o tocca Fatto.",s4:"Stile",ring:"Cerchio",ring_size:"Dimensione cerchio",speed:"Velocità",format:"Formato",follow:"9:16 ti segue",music:"Musica",pick_music:"Scegli brano",no_music:"Nessuna musica",music_vol:"Volume musica",game_vol:"Audio partita",c_red:"Rosso",c_yellow:"Giallo",c_white:"Bianco",c_blue:"Blu",s5:"Esporta",sum_clips:"clip scelte",sum_len:"durata",sum_pts:"clip senza cerchio",s5_lead:"L'esportazione riproduce le clip in tempo reale e le registra. Tieni l'app aperta finché non ha finito.",export:"Crea video",rec_clip:"Registrazione clip {i} di {n}…",done_msg:"Fatto: {t} di durata ({mb} MB).",note_webm:"Il file è WebM. Instagram e TikTok lo accettano; l'app Foto di iPhone potrebbe richiedere un convertitore. Su iPhone/Safari ottieni direttamente MP4.",note_mp4:"MP4, pronto da pubblicare.",export_fail:"Esportazione fallita: {e}. Prova Safari su iPhone o Chrome su computer.",save:"Salva sul telefono",saved:"Salvato.",save_fail:"Impossibile salvare ({c}). Tieni premuto il video qui sopra e scegli Salva.",save_manual:"Tieni premuto il video qui sopra e scegli Salva video, oppure aprilo a schermo intero e salva da lì.",gate_body:"Accesso anticipato. Inserisci il tuo codice.",gate_btn:"Apri",gate_bad:"Codice errato."},
+pt:{_n:"Português",tagline:"O teu vídeo de highlights do Veo",empty_title:"Ainda sem vídeo",empty_body:"Descarrega o jogo em MP4 do Veo (app.veo.co) e escolhe o ficheiro abaixo.",s1:"Vídeo do jogo",s1_lead:"O jogo inteiro ou um clipe do Veo. Nada é enviado: tudo acontece no teu telemóvel.",pick_video:"Escolher ficheiro de vídeo",s2:"Os teus clipes",s2_lead:"Reproduz o vídeo e toca em Início quando algo bom acontece, Fim quando termina. Desmarca o que não queres.",start:"Início",stop:"Fim",clip_started:"Clipe iniciado em {t}: toca em Fim quando terminar.",clip_short:"Clipe demasiado curto. Pelo menos meio segundo.",clip_saved:"Clipe guardado. Adiciona mais ou vai ao passo 3.",remove_clip:"Remover clipe",include_clip:"Incluir clipe {n}",s3:"Marca-te",s3_lead:"Escolhe um clipe na lista, vai ao início e toca em ti na imagem. Faz o mesmo no fim: o círculo segue-te pelo meio. Adiciona pontos onde mudas de direção.",mark:"Marcar na imagem",done:"Concluído",clear_pts:"Limpar pontos",hint:"Toca em ti na imagem",choose_clip:"Escolhe um clipe na lista acima.",selected_clip:"Clipe escolhido: {a} – {b} ({n} pontos).",marking_help:"Avança dentro do clipe e toca em ti. Cada toque adiciona um ponto nesse instante.",pt1:"Ponto 1 definido. Vai ao fim do clipe e toca de novo.",ptn:"{n} pontos definidos. Adiciona mais onde mudas de direção, ou toca em Concluído.",s4:"Estilo",ring:"Círculo",ring_size:"Tamanho do círculo",speed:"Velocidade",format:"Formato",follow:"9:16 segue-te",music:"Música",pick_music:"Escolher faixa",no_music:"Sem música",music_vol:"Volume da música",game_vol:"Som do jogo",c_red:"Vermelho",c_yellow:"Amarelo",c_white:"Branco",c_blue:"Azul",s5:"Exportar",sum_clips:"clipes escolhidos",sum_len:"duração",sum_pts:"clipes sem círculo",s5_lead:"A exportação reproduz os clipes em tempo real e grava-os. Mantém a app aberta até terminar.",export:"Criar vídeo",rec_clip:"A gravar clipe {i} de {n}…",done_msg:"Concluído: {t} de duração ({mb} MB).",note_webm:"O ficheiro é WebM. Instagram e TikTok aceitam-no; a app Fotos do iPhone pode precisar de um conversor. No iPhone/Safari obténs MP4 diretamente.",note_mp4:"MP4, pronto a publicar.",export_fail:"A exportação falhou: {e}. Tenta Safari no iPhone ou Chrome no computador.",save:"Guardar no telemóvel",saved:"Guardado.",save_fail:"Não foi possível guardar ({c}). Mantém o vídeo acima premido e escolhe Guardar.",save_manual:"Mantém o vídeo acima premido e escolhe Guardar vídeo, ou abre-o em ecrã inteiro e guarda a partir daí.",gate_body:"Acesso antecipado. Introduz o teu código.",gate_btn:"Abrir",gate_bad:"Código errado."},
+nl:{_n:"Nederlands",tagline:"Je highlightvideo uit Veo",empty_title:"Nog geen video",empty_body:"Download de wedstrijd als MP4 uit Veo (app.veo.co) en kies het bestand hieronder.",s1:"Wedstrijdvideo",s1_lead:"De hele wedstrijd of één Veo-clip. Er wordt niets geüpload – alles gebeurt op je telefoon.",pick_video:"Videobestand kiezen",s2:"Jouw clips",s2_lead:"Speel de video af en tik op Start als er iets goeds gebeurt, op Stop als het voorbij is. Vink uit wat je niet wilt.",start:"Start",stop:"Stop",clip_started:"Clip gestart op {t} – tik op Stop als het voorbij is.",clip_short:"Clip te kort. Minimaal een halve seconde.",clip_saved:"Clip opgeslagen. Voeg meer toe of ga naar stap 3.",remove_clip:"Clip verwijderen",include_clip:"Clip {n} meenemen",s3:"Markeer jezelf",s3_lead:"Kies een clip in de lijst, ga naar het begin en tik op jezelf in beeld. Doe hetzelfde aan het eind – de ring volgt je ertussen. Voeg punten toe waar je van richting verandert.",mark:"Markeren in beeld",done:"Klaar",clear_pts:"Punten wissen",hint:"Tik op jezelf in beeld",choose_clip:"Kies hierboven een clip.",selected_clip:"Gekozen clip: {a} – {b} ({n} punten).",marking_help:"Spoel binnen de clip en tik op jezelf. Elke tik zet een punt op dat moment.",pt1:"Punt 1 gezet. Ga naar het eind van de clip en tik opnieuw.",ptn:"{n} punten gezet. Voeg meer toe waar je van richting verandert, of tik op Klaar.",s4:"Stijl",ring:"Ring",ring_size:"Ringgrootte",speed:"Snelheid",format:"Formaat",follow:"9:16 volgt je",music:"Muziek",pick_music:"Nummer kiezen",no_music:"Geen muziek gekozen",music_vol:"Muziekvolume",game_vol:"Wedstrijdgeluid",c_red:"Rood",c_yellow:"Geel",c_white:"Wit",c_blue:"Blauw",s5:"Exporteren",sum_clips:"clips gekozen",sum_len:"lengte",sum_pts:"clips zonder ring",s5_lead:"De export speelt de clips in realtime af en neemt ze op. Houd de app open tot het klaar is.",export:"Video maken",rec_clip:"Clip {i} van {n} opnemen…",done_msg:"Klaar – {t} lang ({mb} MB).",note_webm:"Het bestand is WebM. Instagram en TikTok accepteren het; de Foto's-app van iPhone heeft mogelijk een converter nodig. Op iPhone/Safari krijg je direct MP4.",note_mp4:"MP4 – klaar om te plaatsen.",export_fail:"Export mislukt: {e}. Probeer Safari op iPhone of Chrome op de computer.",save:"Opslaan op telefoon",saved:"Opgeslagen.",save_fail:"Kon niet opslaan ({c}). Houd de video hierboven ingedrukt en kies Bewaar.",save_manual:"Houd de video hierboven ingedrukt en kies Bewaar video, of open hem op volledig scherm en bewaar van daaruit.",gate_body:"Vroege toegang. Voer je code in.",gate_btn:"Openen",gate_bad:"Verkeerde code."}
+};
+let lang = 'en';
+const t = (k, v={}) => (L[lang][k] ?? L.en[k] ?? k).replace(/\{(\w+)\}/g, (_,x) => v[x] ?? '');
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+  $('tap').setAttribute('aria-label', t('hint'));
+  if (!state.musicFile) $('musicName').textContent = t('no_music');
+  $('markBtn').textContent = state.marking ? t('done') : t('mark');
+  if (state.clips) renderClips();
+}
+const sel = $('lang');
+Object.keys(L).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = L[k]._n; sel.appendChild(o); });
+try { lang = localStorage.getItem('reel-lang') || (navigator.language||'en').slice(0,2); } catch(e){}
+if (!L[lang]) lang = 'en';
+sel.value = lang;
+sel.onchange = () => { lang = sel.value; try{ localStorage.setItem('reel-lang', lang); }catch(e){} applyLang(); };
+
+// ---------- access gate ----------
+const CODES = ['REEL2026'];
+let unlocked = false;
+try { unlocked = localStorage.getItem('reel-access') === '1'; } catch(e){}
+if (unlocked) $('gate').classList.add('hidden');
+$('gateForm').onsubmit = e => {
+  e.preventDefault();
+  const c = $('gateCode').value.trim().toUpperCase();
+  if (CODES.includes(c)){ $('gate').classList.add('hidden'); try{ localStorage.setItem('reel-access','1'); }catch(e){} }
+  else $('gateErr').textContent = t('gate_bad');
+};
+
+const video = $('video'), overlay = $('overlay'), frame = $('frame');
+const ctx = overlay.getContext('2d');
+
+const state = {
+  clips: [], activeId: null, pendingIn: null, marking: false, sources: [], srcIdx: 0,
+  ringColor: '#e2322b', ringSize: 46, speed: 1, format: '16:9',
+  musicFile: null, musicVol: .8, gameVol: .25,
+  resultBlob: null, resultExt: 'webm', exporting: false
+};
+
+const fmt = s => { s = Math.max(0, s||0); const m = Math.floor(s/60), r = Math.floor(s%60); return m + ':' + String(r).padStart(2,'0'); };
+const uid = () => Math.random().toString(36).slice(2,8);
+const active = () => state.clips.find(c => c.id === state.activeId);
+const clipAt = tt => state.clips.find(c => c.src===state.srcIdx && tt >= c.in && tt <= c.out);
+const sortedClips = () => [...state.clips].sort((a,b)=>(a.src-b.src)||(a.in-b.in));
+const selected = () => sortedClips().filter(c => c.on && c.out > c.in);
+
+function ringAt(clip, tt){
+  if (!clip || !clip.pts.length) return null;
+  const pts = [...clip.pts].sort((a,b)=>a.t-b.t);
+  if (tt <= pts[0].t) return pts[0];
+  if (tt >= pts[pts.length-1].t) return pts[pts.length-1];
+  for (let i=0;i<pts.length-1;i++){
+    const a = pts[i], b = pts[i+1];
+    if (tt >= a.t && tt <= b.t){ const k = (tt-a.t)/((b.t-a.t)||1); return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k}; }
+  }
+  return pts[pts.length-1];
+}
+function contentRect(boxW, boxH){
+  const vw = video.videoWidth||16, vh = video.videoHeight||9;
+  const s = Math.min(boxW/vw, boxH/vh);
+  const w = vw*s, h = vh*s;
+  return {x:(boxW-w)/2, y:(boxH-h)/2, w, h};
+}
+function drawRing(c, cx, cy, r, lw){
+  c.save(); c.lineWidth = lw; c.strokeStyle = state.ringColor;
+  c.shadowColor = 'rgba(0,0,0,.6)'; c.shadowBlur = lw*1.5;
+  c.beginPath(); c.ellipse(cx, cy, r, r*.55, 0, 0, Math.PI*2); c.stroke(); c.restore();
+}
+
+function sizeOverlay(){
+  const r = frame.getBoundingClientRect();
+  overlay.width = Math.round(r.width*devicePixelRatio); overlay.height = Math.round(r.height*devicePixelRatio);
+}
+function renderOverlay(){
+  const r = frame.getBoundingClientRect();
+  if (overlay.width !== Math.round(r.width*devicePixelRatio)) sizeOverlay();
+  const W = overlay.width, H = overlay.height;
+  ctx.clearRect(0,0,W,H);
+  if (!video.videoWidth) return;
+  const cr = contentRect(W,H);
+  const tt = video.currentTime;
+  const a0 = active(); const clip = a0 && a0.src===state.srcIdx && tt>=a0.in && tt<=a0.out ? a0 : clipAt(tt);
+  const p = ringAt(clip, tt);
+  if (p){ drawRing(ctx, cr.x + p.x*cr.w, cr.y + p.y*cr.h, cr.h*(state.ringSize/1000)*1.6, Math.max(2, cr.h*0.008)); }
+  const a = active();
+  if (a && a.src===state.srcIdx && state.marking){
+    a.pts.forEach(k => { ctx.fillStyle = Math.abs(k.t-tt)<0.08 ? state.ringColor : 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(cr.x+k.x*cr.w, cr.y+k.y*cr.h, 4*devicePixelRatio, 0, Math.PI*2); ctx.fill(); });
+  }
+  const g = $('cropGuide');
+  if (state.format === '9:16'){
+    const cw = cr.h * 9/16;
+    let cx = p ? cr.x + p.x*cr.w : cr.x + cr.w/2;
+    cx = Math.min(Math.max(cx, cr.x+cw/2), cr.x+cr.w-cw/2);
+    g.style.left = (cx-cw/2)/devicePixelRatio + 'px'; g.style.width = cw/devicePixelRatio + 'px';
+  }
+}
+function loop(){ if (!state.exporting) renderOverlay(); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+addEventListener('resize', sizeOverlay);
+
+const scrub = $('scrub');
+let scrubbing = false;
+$('playBtn').onclick = () => video.paused ? video.play() : video.pause();
+video.addEventListener('play', ()=> $('playBtn').textContent = '❚❚');
+video.addEventListener('pause', ()=> $('playBtn').textContent = '▶');
+video.addEventListener('timeupdate', () => { if (!scrubbing) scrub.value = video.currentTime; $('time').textContent = fmt(video.currentTime)+' / '+fmt(video.duration); });
+scrub.addEventListener('input', () => { scrubbing = true; video.currentTime = +scrub.value; $('time').textContent = fmt(video.currentTime)+' / '+fmt(video.duration); });
+scrub.addEventListener('change', () => { scrubbing = false; });
+
+function loadSource(i){
+  return new Promise(res => {
+    const src = state.sources[i]; if (!src) return res();
+    state.srcIdx = i; $('srcSel').value = i;
+    video.src = src.url; video.load();
+    video.addEventListener('loadedmetadata', () => {
+      src.duration = video.duration;
+      scrub.max = video.duration; scrub.value = 0;
+      $('time').textContent = '0:00 / '+fmt(video.duration);
+      sizeOverlay(); res();
+    }, {once:true});
+  });
+}
+$('videoFile').onchange = async e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  state.sources.forEach(sv => URL.revokeObjectURL(sv.url));
+  state.sources = files.map(f => ({name:f.name, url:URL.createObjectURL(f), duration:0}));
+  const sel = $('srcSel'); sel.innerHTML = '';
+  state.sources.forEach((sv,i) => { const o = document.createElement('option'); o.value = i; o.textContent = (i+1)+'/'+state.sources.length+' · '+sv.name; sel.appendChild(o); });
+  sel.style.display = state.sources.length > 1 ? 'block' : 'none';
+  $('empty').style.display = 'none';
+  state.clips = []; state.activeId = null; state.pendingIn = null;
+  await loadSource(0);
+  scrub.disabled = false; $('playBtn').disabled = false;
+  $('inBtn').disabled = false; $('s1').classList.add('done'); $('s1').textContent = '✓';
+  renderClips();
+};
+$('srcSel').onchange = async () => { video.pause(); stopMarking(); await loadSource(+$('srcSel').value); renderClips(); };
+
+$('inBtn').onclick = () => {
+  state.pendingIn = video.currentTime;
+  $('inBtn').disabled = true; $('outBtn').disabled = false;
+  $('clipStatus').innerHTML = '<span class="recording">● </span>' + t('clip_started',{t:fmt(state.pendingIn)});
+};
+$('outBtn').onclick = () => {
+  const out = video.currentTime;
+  if (out - state.pendingIn < 0.5){ $('clipStatus').textContent = t('clip_short'); return; }
+  const c = {id:uid(), in:state.pendingIn, out, on:true, pts:[], src:state.srcIdx};
+  state.clips.push(c); state.activeId = c.id; state.pendingIn = null;
+  $('inBtn').disabled = false; $('outBtn').disabled = true;
+  $('clipStatus').textContent = t('clip_saved');
+  renderClips();
+};
+
+function renderClips(){
+  const ul = $('clips'); ul.innerHTML = '';
+  sortedClips().forEach((c, i) => {
+    const li = document.createElement('li'); li.className = 'clip' + (c.id===state.activeId?' active':'');
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = c.on; cb.setAttribute('aria-label', t('include_clip',{n:i+1}));
+    cb.onchange = () => { c.on = cb.checked; updateSummary(); };
+    const tt = document.createElement('div'); tt.className='t';
+    tt.innerHTML = '<b>'+fmt(c.in)+' – '+fmt(c.out)+'</b><small>'+ (state.sources.length>1 ? '#'+(c.src+1)+' · ' : '') + (c.out-c.in).toFixed(1) +' s</small>';
+    tt.onclick = async () => { state.activeId = c.id; video.pause(); if (c.src !== state.srcIdx) await loadSource(c.src); video.currentTime = c.in; renderClips(); };
+    const pts = document.createElement('span'); pts.className='pts'; pts.textContent = c.pts.length;
+    const x = document.createElement('button'); x.className='x'; x.textContent='✕'; x.setAttribute('aria-label', t('remove_clip'));
+    x.onclick = () => { state.clips = state.clips.filter(k=>k!==c); if (state.activeId===c.id) state.activeId = null; stopMarking(); renderClips(); };
+    li.append(cb, tt, pts, x); ul.appendChild(li);
+  });
+  const has = state.clips.length>0;
+  $('s2').classList.toggle('done', has); $('s2').textContent = has ? '✓' : '2';
+  $('markBtn').disabled = !active(); $('clearPtsBtn').disabled = !(active() && active().pts.length);
+  if (!active()) $('markStatus').textContent = has ? t('choose_clip') : '';
+  else if (!state.marking) $('markStatus').textContent = t('selected_clip',{a:fmt(active().in), b:fmt(active().out), n:active().pts.length});
+  updateSummary();
+}
+
+async function startMarking(){
+  const c = active(); if (!c) return;
+  video.pause(); if (c.src !== state.srcIdx) await loadSource(c.src);
+  state.marking = true; frame.classList.add('marking');
+  if (video.currentTime < c.in || video.currentTime > c.out) video.currentTime = c.in;
+  $('markBtn').textContent = t('done');
+  $('markStatus').textContent = t('marking_help');
+}
+function stopMarking(){
+  state.marking = false; frame.classList.remove('marking'); $('markBtn').textContent = t('mark');
+  renderClips();
+}
+$('markBtn').onclick = () => state.marking ? stopMarking() : startMarking();
+$('clearPtsBtn').onclick = () => { const c = active(); if (c){ c.pts = []; renderClips(); } };
+$('tap').addEventListener('click', e => {
+  const c = active(); if (!c) return;
+  const r = frame.getBoundingClientRect();
+  const cr = contentRect(r.width, r.height);
+  const x = (e.clientX - r.left - cr.x)/cr.w, y = (e.clientY - r.top - cr.y)/cr.h;
+  if (x<0||x>1||y<0||y>1) return;
+  const tt = Math.min(Math.max(video.currentTime, c.in), c.out);
+  c.pts = c.pts.filter(p => Math.abs(p.t-tt) > 0.15);
+  c.pts.push({t:tt, x, y});
+  const n = c.pts.length;
+  $('markStatus').textContent = n===1 ? t('pt1') : t('ptn',{n});
+  $('clearPtsBtn').disabled = false;
+  const li = document.querySelector('.clip.active .pts'); if (li) li.textContent = n;
+  $('s3').classList.add('done'); $('s3').textContent = '✓';
+  updateSummary();
+});
+
+$('swatches').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.ringColor = b.dataset.c; [...$('swatches').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); });
+$('ringSize').oninput = e => { state.ringSize = +e.target.value; $('ringSizeVal').textContent = e.target.value; };
+$('speedSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.speed = +b.dataset.s; [...$('speedSeg').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); updateSummary(); });
+$('formatSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.format = b.dataset.f; frame.classList.toggle('vertical', state.format==='9:16'); [...$('formatSeg').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); });
+$('musicFile').onchange = e => { state.musicFile = e.target.files[0]||null; $('musicName').textContent = state.musicFile ? state.musicFile.name : t('no_music'); };
+$('musicVol').oninput = e => { state.musicVol = e.target.value/100; $('musicVolVal').textContent = e.target.value; };
+$('gameVol').oninput = e => { state.gameVol = e.target.value/100; $('gameVolVal').textContent = e.target.value; };
+
+function updateSummary(){
+  const s = selected();
+  const len = s.reduce((a,c)=>a+(c.out-c.in),0)/state.speed;
+  $('sumClips').textContent = s.length; $('sumLen').textContent = fmt(len);
+  $('sumPts').textContent = s.filter(c=>!c.pts.length).length;
+  $('exportBtn').disabled = !s.length || state.exporting;
+}
+
+let audioCtx, gameSrc, gameGain, musicEl, musicSrc, musicGain, dest;
+function ensureAudio(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  dest = audioCtx.createMediaStreamDestination();
+  gameSrc = audioCtx.createMediaElementSource(video);
+  gameGain = audioCtx.createGain();
+  gameSrc.connect(gameGain); gameGain.connect(audioCtx.destination); gameGain.connect(dest);
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function seekTo(tt){ return new Promise(res => { const h = () => { video.removeEventListener('seeked', h); res(); }; video.addEventListener('seeked', h); video.currentTime = tt; }); }
+
+async function exportReel(){
+  const clips = selected(); if (!clips.length) return;
+  state.exporting = true; stopMarking(); updateSummary();
+  $('result').style.display='none'; $('progress').style.display='block'; $('progressBar').style.width='0%';
+  const status = s => $('exportStatus').textContent = s;
+  try {
+    ensureAudio(); await audioCtx.resume();
+    gameGain.gain.value = state.gameVol;
+    if (musicEl){ musicEl.pause(); try{ musicSrc.disconnect(); }catch(e){} musicEl = null; }
+    if (state.musicFile){
+      musicEl = new Audio(URL.createObjectURL(state.musicFile)); musicEl.loop = true; musicEl.crossOrigin='anonymous';
+      musicSrc = audioCtx.createMediaElementSource(musicEl); musicGain = audioCtx.createGain(); musicGain.gain.value = state.musicVol;
+      musicSrc.connect(musicGain); musicGain.connect(dest);
+    }
+    if (clips[0].src !== state.srcIdx) await loadSource(clips[0].src);
+    let vw = video.videoWidth, vh = video.videoHeight;
+    const out = document.createElement('canvas');
+    if (state.format==='9:16'){ out.height = Math.min(vh, 1280); out.width = Math.round(out.height*9/16); }
+    else { out.width = Math.min(vw, 1280); out.height = Math.round(out.width*vh/vw); }
+    const oc = out.getContext('2d');
+    const stream = out.captureStream(30);
+    dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+    const types = ['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    const mime = types.find(x => MediaRecorder.isTypeSupported(x)) || '';
+    state.resultExt = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:6_000_000} : undefined);
+    const chunks = []; rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(r => rec.onstop = r);
+
+    const total = clips.reduce((a,c)=>a+(c.out-c.in),0);
+    let played = 0, cur = null, smoothX = null;
+    video.pause(); video.muted = false; video.playbackRate = state.speed;
+
+    const draw = () => {
+      if (!cur) return;
+      const tt = video.currentTime;
+      const p = ringAt(cur, tt);
+      if (state.format==='9:16'){
+        const srcH = vh, srcW = srcH*9/16;
+        const cx = p ? p.x*vw : vw/2;
+        smoothX = smoothX==null ? cx : smoothX + (cx-smoothX)*0.08;
+        const sx = Math.min(Math.max(smoothX - srcW/2, 0), vw-srcW);
+        oc.drawImage(video, sx, 0, srcW, srcH, 0, 0, out.width, out.height);
+        if (p) drawRing(oc, (p.x*vw - sx)/srcW*out.width, p.y*out.height, out.height*(state.ringSize/1000)*1.6, Math.max(3, out.height*0.008));
+      } else {
+        oc.drawImage(video, 0, 0, out.width, out.height);
+        if (p) drawRing(oc, p.x*out.width, p.y*out.height, out.height*(state.ringSize/1000)*1.6, Math.max(3, out.height*0.008));
+      }
+      $('progressBar').style.width = Math.min(100, (played + Math.max(0, tt-cur.in))/total*100).toFixed(1)+'%';
+    };
+    let raf; const tick = () => { draw(); raf = requestAnimationFrame(tick); };
+
+    rec.start(250);
+    if (musicEl){ musicEl.currentTime = 0; await musicEl.play().catch(()=>{}); }
+    raf = requestAnimationFrame(tick);
+
+    for (let i=0;i<clips.length;i++){
+      cur = null; smoothX = null;
+      status(t('rec_clip',{i:i+1, n:clips.length}));
+      if (clips[i].src !== state.srcIdx){ await loadSource(clips[i].src); vw = video.videoWidth; vh = video.videoHeight; }
+      cur = clips[i];
+      await seekTo(cur.in);
+      await video.play();
+      await new Promise(res => { const h = () => { if (video.currentTime >= cur.out || video.ended){ video.removeEventListener('timeupdate', h); res(); } }; video.addEventListener('timeupdate', h); });
+      video.pause();
+      played += cur.out-cur.in;
+    }
+    await sleep(300);
+    cancelAnimationFrame(raf);
+    rec.stop(); await done;
+    if (musicEl) musicEl.pause();
+    video.playbackRate = 1;
+
+    state.resultBlob = new Blob(chunks, {type: mime || 'video/webm'});
+    const rv = $('resultVideo'); if (rv.src) URL.revokeObjectURL(rv.src);
+    rv.src = URL.createObjectURL(state.resultBlob);
+    $('result').style.display='block'; $('progressBar').style.width='100%';
+    status(t('done_msg',{t:fmt(total/state.speed), mb:(state.resultBlob.size/1e6).toFixed(1)}));
+    $('resultNote').textContent = state.resultExt==='webm' ? t('note_webm') : t('note_mp4');
+    $('result').scrollIntoView({behavior:'smooth', block:'center'});
+  } catch (err){
+    console.error(err);
+    status(t('export_fail',{e: err && err.message ? err.message : String(err)}));
+  } finally {
+    state.exporting = false; updateSummary();
+  }
+}
+$('exportBtn').onclick = exportReel;
+
+let downloads = null;
+if (window.claude && typeof claude.use === 'function') claude.use('downloads').then(d => { downloads = d; }).catch(()=>{});
+$('saveBtn').onclick = async () => {
+  if (!state.resultBlob) return;
+  const filename = 'highlights-'+new Date().toISOString().slice(0,10)+'.'+state.resultExt;
+  if (downloads){
+    try { await downloads.save({filename, data: state.resultBlob}); $('resultNote').textContent = t('saved'); }
+    catch (e){ if (e && e.code==='declined') return; $('resultNote').textContent = t('save_fail',{c:(e&&e.code)||'error'}); }
+  } else {
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(state.resultBlob); a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      $('resultNote').textContent = t('saved');
+    } catch(e){ $('resultNote').textContent = t('save_manual'); }
+  }
+};
+
+try {
+  const s = JSON.parse(localStorage.getItem('reel-style')||'{}');
+  if (s.ringColor){ state.ringColor = s.ringColor; [...$('swatches').children].forEach(x=>x.setAttribute('aria-pressed', x.dataset.c===s.ringColor)); }
+  if (s.ringSize){ state.ringSize = s.ringSize; $('ringSize').value = s.ringSize; $('ringSizeVal').textContent = s.ringSize; }
+} catch(e){}
+addEventListener('pagehide', () => { try { localStorage.setItem('reel-style', JSON.stringify({ringColor:state.ringColor, ringSize:state.ringSize})); } catch(e){} });
+
+applyLang();
+})();
+</script>
+</body>
+</html>
